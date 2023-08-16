@@ -1,14 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"os"
 	"bufio"
-	"strings"
-	"net/http"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
+	"net"
+	"net/http"
+	"os"
+	"strings"
 )
 
 const (
@@ -20,23 +20,23 @@ const (
 )
 
 type amiData struct {
-	TotalUsers 		 []string
+	TotalUsers       []string
 	TotalNumOfUsers  int
-	ActiveUsers 	 []string
+	ActiveUsers      []string
 	ActiveNumOfUsers int
-	ActiveCalls		 map[string]string
-	NumOfCalls 		 int
-	RecentEvents 	 []string
+	ActiveCalls      map[string]string
+	NumOfCalls       int
+	RecentEvents     []string
 }
 
 var Data *amiData = &amiData{
-	TotalUsers: make([]string, 0),
-	TotalNumOfUsers: 0,
-	ActiveUsers: make([]string, 0),
+	TotalUsers:       make([]string, 0),
+	TotalNumOfUsers:  0,
+	ActiveUsers:      make([]string, 0),
 	ActiveNumOfUsers: 0,
-	ActiveCalls: make(map[string]string),
-	NumOfCalls: 0,
-	RecentEvents: make([]string, 0),
+	ActiveCalls:      make(map[string]string),
+	NumOfCalls:       0,
+	RecentEvents:     make([]string, 0),
 }
 
 var ch chan bool = make(chan bool)
@@ -50,7 +50,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func action(action string) {
-	fmt.Fprint(conn, action + "\r\n")
+	fmt.Fprint(conn, action+"\r\n")
 }
 
 func login() {
@@ -65,14 +65,14 @@ func getReply() (string, bool) {
 	var replyType bool = true
 	for {
 		temp, _ := reader.ReadString('\n')
-		if(temp == "\r\n") {
+		if temp == "\r\n" {
 			break
-		} else if(strings.Contains(temp, "Asterisk Call Manager")) {
+		} else if strings.Contains(temp, "Asterisk Call Manager") {
 			continue
 		}
 		reply += temp
 	}
-	if (strings.Contains(reply, "Response: ")) {
+	if strings.Contains(reply, "Response: ") {
 		replyType = false
 	}
 	return reply, replyType
@@ -85,14 +85,14 @@ func eventMap(event string, mappedEvent *map[string]string) {
 	f := func(c rune) bool {
 		return c == '\t' || c == '\r' || c == '\n'
 	}
-	var eventInfo []string = strings.FieldsFunc(event, f)	
-	for i:=0; i<len(eventInfo); i+=2 {
+	var eventInfo []string = strings.FieldsFunc(event, f)
+	for i := 0; i < len(eventInfo); i += 2 {
 		(*mappedEvent)[eventInfo[i]] = eventInfo[i+1]
 	}
 }
 
 func addEvent(newEvent *string) {
-	if(len(Data.RecentEvents) == 10) {
+	if len(Data.RecentEvents) == 10 {
 		Data.RecentEvents = Data.RecentEvents[1:]
 	}
 	Data.RecentEvents = append(Data.RecentEvents, *newEvent)
@@ -105,9 +105,9 @@ func getExtWithoutChannel(user string) string {
 func removeUser(user string) {
 	ext := getExtWithoutChannel(user)
 	numOfUsers := len(Data.ActiveUsers)
-	for i:=0; i<numOfUsers; i++ {
-		if(Data.ActiveUsers[i] == ext) {
-			Data.ActiveUsers[i] = Data.ActiveUsers[numOfUsers - 1]
+	for i := 0; i < numOfUsers; i++ {
+		if Data.ActiveUsers[i] == ext {
+			Data.ActiveUsers[i] = Data.ActiveUsers[numOfUsers-1]
 			Data.ActiveUsers = Data.ActiveUsers[:(numOfUsers - 1)]
 			Data.ActiveNumOfUsers--
 			return
@@ -131,18 +131,18 @@ func getUsers() {
 
 func getAmiData() {
 	result, resultType := getReply()
-	if(resultType) {	// Ignoring responses, only reacting to events
+	if resultType { // Ignoring responses, only reacting to events
 		var mappedEvent map[string]string = make(map[string]string)
 		eventMap(result, &mappedEvent)
 		var eventType string = mappedEvent["Event"]
 
 		switch eventType {
 		case "PeerStatus":
-			if(mappedEvent["PeerStatus"] == "Unreachable") {
+			if mappedEvent["PeerStatus"] == "Unreachable" {
 				removeUser(mappedEvent["Peer"])
 				var newEvent string = "Ext " + getExtWithoutChannel(mappedEvent["Peer"]) + " has unregistered."
 				addEvent(&newEvent)
-			} else if (mappedEvent["PeerStatus"] == "Reachable") {
+			} else if mappedEvent["PeerStatus"] == "Reachable" {
 				addUser(mappedEvent["Peer"])
 				var newEvent string = "Ext " + getExtWithoutChannel(mappedEvent["Peer"]) + " has registered."
 				addEvent(&newEvent)
@@ -158,7 +158,7 @@ func getAmiData() {
 
 		case "DialEnd":
 			var newEvent string
-			if(mappedEvent["DialStatus"] == "ANSWER") {
+			if mappedEvent["DialStatus"] == "ANSWER" {
 				newEvent = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["ConnectedLineNum"]
 				Data.NumOfCalls++
@@ -169,7 +169,7 @@ func getAmiData() {
 
 		case "AGIExecStart":
 			var newEvent string
-			if(mappedEvent["Command"] == "ANSWER") {
+			if mappedEvent["Command"] == "ANSWER" {
 				newEvent = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["Exten"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["Exten"]
 				Data.NumOfCalls++
@@ -178,7 +178,7 @@ func getAmiData() {
 
 		case "Hangup":
 			_, keyExists := Data.ActiveCalls[mappedEvent["Linkedid"]]
-			if(keyExists) {
+			if keyExists {
 				var newEvent string = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has ended."
 				addEvent(&newEvent)
 				delete(Data.ActiveCalls, mappedEvent["Linkedid"])
@@ -188,7 +188,7 @@ func getAmiData() {
 		case "EndpointList":
 			Data.TotalUsers = append(Data.TotalUsers, mappedEvent["ObjectName"])
 			Data.TotalNumOfUsers++
-			if(mappedEvent["DeviceState"] != "Unavailable") {
+			if mappedEvent["DeviceState"] != "Unavailable" {
 				Data.ActiveUsers = append(Data.ActiveUsers, mappedEvent["ObjectName"])
 				Data.ActiveNumOfUsers++
 			}
@@ -214,7 +214,7 @@ func wsServe(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		_, _, readErr := ws.ReadMessage()
-		if(readErr != nil) {
+		if readErr != nil {
 			fmt.Println("Websocket error: ", readErr)
 			quit <- true
 			return
@@ -230,7 +230,7 @@ func wsWrite(ws *websocket.Conn, quit chan bool) {
 			return
 		case <-ch:
 			wsErr := ws.WriteJSON(*Data)
-			if(wsErr != nil) {
+			if wsErr != nil {
 				fmt.Println("Websocket error: ", wsErr)
 				return
 			}
@@ -247,7 +247,7 @@ func main() {
 
 	login()
 	go func() {
-		for{
+		for {
 			getAmiData()
 			ch <- true
 		}
