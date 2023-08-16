@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" type="text/css" href="./semantic.min.css">
+        <style>
+            body {
+                /*background-image: linear-gradient(to right, rgb(228, 145, 51), rgb(238, 191, 63));*/
+                background-color: rgb(5, 5, 5);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="ui fixed inverted menu">
+            <h2 class="ui yellow header item">AMI.go</h2>
+        </div>
+
+        <br> <br> <br> <br> <br> <br> <br>
+
+        <div class="ui four column grid" style="height:75%;">
+            <div class="ui one wide column"></div>
+            <div class="ui six wide column">
+                <div class="ui inverted tall raised segment">
+                    <span class="ui header">Total users: </span>
+                    <span class="ui yellow header" id="total users" ></span> 
+                    <br> <br>
+                    <p id="list total users"></p>
+                </div>
+                <div class="ui inverted tall raised segment">
+                    <span class="ui header">Active users: </span>
+                    <span class="ui yellow header" id="active users"></span> 
+                    <br> <br>
+                    <p id="list active users"></p>
+                </div>
+                <div class="ui inverted tall raised segment">
+                    <span class="ui header">Ongoing calls: </span>
+                    <span class="ui yellow header" id="ongoing calls"></span> 
+                    <br> <br>
+                    <p id="list ongoing calls"></p>
+                </div>
+            </div>
+            <div class="ui one wide column"></div>
+            <div class="ui seven wide column">
+                <div class="ui inverted raised segment" style="height:90%;">
+                    <h2 class="ui yellow header">Recent activity</h2>
+                    <br>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 0"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 1"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 2"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 3"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 4"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 5"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 6"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 7"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 8"></p>
+                    </div>
+                    <div class="ui inverted fitted divider"></div>
+                    <div class="ui inverted vertical segment">
+                        <p id="list recent events 9"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="ui one wide column"></div>
+        </div>
+
+        <script>
+            var temp = ""                
+            let amiSocket = new WebSocket("ws://localhost:3333");
+            amiSocket.onopen = (event) => {
+                console.log("Connected to server.");
+            };
+            amiSocket.onmessage = (event) => {
+                console.log(event.data);
+                let response = JSON.parse((event.data));
+                document.getElementById("total users").innerHTML = response.TotalNumOfUsers;
+                document.getElementById("active users").innerHTML = response.ActiveNumOfUsers;
+                document.getElementById("list total users").innerHTML = response.TotalUsers;
+                document.getElementById("list active users").innerHTML = response.ActiveUsers;
+                document.getElementById("ongoing calls").innerHTML = response.NumOfCalls;
+                temp = "";
+                for (let id in response.ActiveCalls) {
+                    temp += response.ActiveCalls[id] + "<br>";
+                }
+                document.getElementById("list ongoing calls").innerHTML = temp;
+                for (let i = 0; i < response.RecentEvents.length; i++) {
+                    document.getElementById("list recent events " + i).innerHTML = response.RecentEvents[i];
+                }
+            };
+        </script>
+
+    </body>
+</html>
