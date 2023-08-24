@@ -30,11 +30,11 @@ type amiData struct {
 }
 
 var (
-	conn net.Conn
-	connErr error
-	reader *bufio.Reader
-	ch chan bool
-	Data *amiData
+	conn     net.Conn
+	connErr  error
+	reader   *bufio.Reader
+	ch       chan bool
+	Data     *amiData
 	upgrader websocket.Upgrader
 )
 
@@ -114,8 +114,8 @@ func removeUser(user string) {
 }
 
 func addUser(user string) {
-	user = strings.Split(user, "/")[1]
-	Data.ActiveUsers = append(Data.ActiveUsers, user)
+	ext := getExtWithoutChannel(user)
+	Data.ActiveUsers = append(Data.ActiveUsers, ext)
 	Data.ActiveNumOfUsers++
 }
 
@@ -201,10 +201,11 @@ func home(w http.ResponseWriter, r *http.Request) {
 func wsServe(w http.ResponseWriter, r *http.Request) {
 	ws, wsErr := upgrader.Upgrade(w, r, nil)
 	defer ws.Close()
-	fmt.Println("Client connected!")
 	if wsErr != nil {
 		fmt.Println(wsErr)
+		return
 	}
+	fmt.Println("Client connected!")
 
 	getUsers()
 	quit := make(chan bool)
@@ -253,7 +254,7 @@ func main() {
 		ActiveCalls:      make(map[string]string),
 		NumOfCalls:       0,
 		RecentEvents:     make([]string, 0),
-	}	
+	}
 
 	login()
 	go func() {
