@@ -29,24 +29,22 @@ type amiData struct {
 	RecentEvents     []string
 }
 
-var Data *amiData = &amiData{
-	TotalUsers:       make([]string, 0),
-	TotalNumOfUsers:  0,
-	ActiveUsers:      make([]string, 0),
-	ActiveNumOfUsers: 0,
-	ActiveCalls:      make(map[string]string),
-	NumOfCalls:       0,
-	RecentEvents:     make([]string, 0),
-}
+var (
+	conn net.Conn
+	connErr error
+	reader *bufio.Reader
+	ch chan bool
+	Data *amiData
+	upgrader websocket.Upgrader
+)
 
-var ch chan bool = make(chan bool)
-var conn, err = net.Dial(connType, connHost+":"+connPort)
-var reader = bufio.NewReader(conn)
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+func init() {
+	conn, connErr = net.Dial(connType, connHost+":"+connPort)
+	upgrader = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin:     func(r *http.Request) bool { return true },
+	}
 }
 
 func action(action string) {
@@ -153,24 +151,24 @@ func getAmiData() {
 			addEvent(&newEvent)
 
 		case "DialState":
-			var newEvent string = "State of dial from " + mappedEvent["CallerIDNum"] + " to " + mappedEvent["DestCallerIDNum"] + " changed to " + mappedEvent["DialStatus"] + "."
+			var newEvent string = "Dial status of the call from " + mappedEvent["CallerIDNum"] + " to " + mappedEvent["DestCallerIDNum"] + " changed to " + mappedEvent["DialStatus"] + "."
 			addEvent(&newEvent)
 
 		case "DialEnd":
 			var newEvent string
 			if mappedEvent["DialStatus"] == "ANSWER" {
-				newEvent = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has started."
+				newEvent = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["ConnectedLineNum"]
 				Data.NumOfCalls++
 			} else {
-				newEvent = "Dial from " + mappedEvent["CallerIDNum"] + " to " + mappedEvent["ConnectedLineNum"] + " ended with status: " + mappedEvent["DialStatus"] + "."
+				newEvent = "The call from " + mappedEvent["CallerIDNum"] + " to " + mappedEvent["ConnectedLineNum"] + " ended with dial status " + mappedEvent["DialStatus"] + "."
 			}
 			addEvent(&newEvent)
 
 		case "AGIExecStart":
 			var newEvent string
 			if mappedEvent["Command"] == "ANSWER" {
-				newEvent = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["Exten"] + " has started."
+				newEvent = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["Exten"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["Exten"]
 				Data.NumOfCalls++
 				addEvent(&newEvent)
@@ -179,7 +177,7 @@ func getAmiData() {
 		case "Hangup":
 			_, keyExists := Data.ActiveCalls[mappedEvent["Linkedid"]]
 			if keyExists {
-				var newEvent string = "Call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has ended."
+				var newEvent string = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has ended."
 				addEvent(&newEvent)
 				delete(Data.ActiveCalls, mappedEvent["Linkedid"])
 				Data.NumOfCalls--
@@ -240,10 +238,22 @@ func wsWrite(ws *websocket.Conn, quit chan bool) {
 
 func main() {
 	defer conn.Close()
-	if err != nil {
-		fmt.Println("Error connecting:", err.Error())
+	if connErr != nil {
+		fmt.Println("Error connecting:", connErr)
 		os.Exit(1)
 	}
+
+	reader = bufio.NewReader(conn)
+	ch = make(chan bool)
+	Data = &amiData{
+		TotalUsers:       make([]string, 0),
+		TotalNumOfUsers:  0,
+		ActiveUsers:      make([]string, 0),
+		ActiveNumOfUsers: 0,
+		ActiveCalls:      make(map[string]string),
+		NumOfCalls:       0,
+		RecentEvents:     make([]string, 0),
+	}	
 
 	login()
 	go func() {
@@ -256,11 +266,10 @@ func main() {
 	http.HandleFunc("/", home)
 	http.HandleFunc("/ws", wsServe)
 	httpErr := http.ListenAndServe(":3333", nil)
-	fmt.Println("listening and serving")
 	if errors.Is(httpErr, http.ErrServerClosed) {
-		fmt.Printf("server closed\n")
-	} else if err != nil {
-		fmt.Printf("error starting server: %s\n", err)
+		fmt.Println("Server closed.")
+	} else if httpErr != nil {
+		fmt.Println("Error starting server: ", httpErr)
 		os.Exit(1)
 	}
 }

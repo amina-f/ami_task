@@ -89,7 +89,7 @@
 
         <script>
             var temp = ""                
-            let amiSocket = new WebSocket("ws://localhost:3333");
+            let amiSocket = new WebSocket("ws://localhost:3333/ws");
             amiSocket.onopen = (event) => {
                 console.log("Connected to server.");
             };
