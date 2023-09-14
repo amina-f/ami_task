@@ -88,7 +88,7 @@
         </div>
 
         <script>
-            var temp = ""                
+            var temp = ""               
             let amiSocket = new WebSocket("ws://localhost:3333/ws");
             amiSocket.onopen = (event) => {
                 console.log("Connected to server.");
@@ -96,15 +96,17 @@
             amiSocket.onmessage = (event) => {
                 console.log(event.data);
                 let response = JSON.parse((event.data));
-                document.getElementById("total users").innerHTML = response.TotalNumOfUsers;
-                document.getElementById("active users").innerHTML = response.ActiveNumOfUsers;
+                document.getElementById("total users").innerHTML = response.TotalUsers.length;
+                document.getElementById("active users").innerHTML = response.ActiveUsers.length;
                 document.getElementById("list total users").innerHTML = response.TotalUsers;
                 document.getElementById("list active users").innerHTML = response.ActiveUsers;
-                document.getElementById("ongoing calls").innerHTML = response.NumOfCalls;
                 temp = "";
+                var callsNum = 0 
                 for (let id in response.ActiveCalls) {
                     temp += response.ActiveCalls[id] + "<br>";
+                    callsNum++
                 }
+                document.getElementById("ongoing calls").innerHTML = callsNum;
                 document.getElementById("list ongoing calls").innerHTML = temp;
                 for (let i = 0; i < response.RecentEvents.length; i++) {
                     document.getElementById("list recent events " + i).innerHTML = response.RecentEvents[i];

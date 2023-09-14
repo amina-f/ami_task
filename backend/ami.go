@@ -21,11 +21,8 @@ const (
 
 type amiData struct {
 	TotalUsers       []string
-	TotalNumOfUsers  int
 	ActiveUsers      []string
-	ActiveNumOfUsers int
 	ActiveCalls      map[string]string
-	NumOfCalls       int
 	RecentEvents     []string
 }
 
@@ -107,7 +104,6 @@ func removeUser(user string) {
 		if Data.ActiveUsers[i] == ext {
 			Data.ActiveUsers[i] = Data.ActiveUsers[numOfUsers-1]
 			Data.ActiveUsers = Data.ActiveUsers[:(numOfUsers - 1)]
-			Data.ActiveNumOfUsers--
 			return
 		}
 	}
@@ -116,14 +112,11 @@ func removeUser(user string) {
 func addUser(user string) {
 	ext := getExtWithoutChannel(user)
 	Data.ActiveUsers = append(Data.ActiveUsers, ext)
-	Data.ActiveNumOfUsers++
 }
 
 func getUsers() {
 	Data.TotalUsers = Data.TotalUsers[:0]
 	Data.ActiveUsers = Data.ActiveUsers[:0]
-	Data.TotalNumOfUsers = 0
-	Data.ActiveNumOfUsers = 0
 	action("Action: PJSIPShowEndpoints\r\n")
 }
 
@@ -159,7 +152,6 @@ func getAmiData() {
 			if mappedEvent["DialStatus"] == "ANSWER" {
 				newEvent = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["ConnectedLineNum"]
-				Data.NumOfCalls++
 			} else {
 				newEvent = "The call from " + mappedEvent["CallerIDNum"] + " to " + mappedEvent["ConnectedLineNum"] + " ended with dial status " + mappedEvent["DialStatus"] + "."
 			}
@@ -170,7 +162,6 @@ func getAmiData() {
 			if mappedEvent["Command"] == "ANSWER" {
 				newEvent = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["Exten"] + " has started."
 				Data.ActiveCalls[mappedEvent["Linkedid"]] = mappedEvent["CallerIDNum"] + " -> " + mappedEvent["Exten"]
-				Data.NumOfCalls++
 				addEvent(&newEvent)
 			}
 
@@ -180,15 +171,12 @@ func getAmiData() {
 				var newEvent string = "The call between " + mappedEvent["CallerIDNum"] + " and " + mappedEvent["ConnectedLineNum"] + " has ended."
 				addEvent(&newEvent)
 				delete(Data.ActiveCalls, mappedEvent["Linkedid"])
-				Data.NumOfCalls--
 			}
 
 		case "EndpointList":
 			Data.TotalUsers = append(Data.TotalUsers, mappedEvent["ObjectName"])
-			Data.TotalNumOfUsers++
 			if mappedEvent["DeviceState"] != "Unavailable" {
 				Data.ActiveUsers = append(Data.ActiveUsers, mappedEvent["ObjectName"])
-				Data.ActiveNumOfUsers++
 			}
 		}
 	}
@@ -248,11 +236,8 @@ func main() {
 	ch = make(chan bool)
 	Data = &amiData{
 		TotalUsers:       make([]string, 0),
-		TotalNumOfUsers:  0,
 		ActiveUsers:      make([]string, 0),
-		ActiveNumOfUsers: 0,
 		ActiveCalls:      make(map[string]string),
-		NumOfCalls:       0,
 		RecentEvents:     make([]string, 0),
 	}
 
